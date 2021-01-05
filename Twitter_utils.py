@@ -3,6 +3,8 @@ import tweepy
 import json
 import time
 import pandas as pd
+from wordcloud import WordCloud, STOPWORDS , ImageColorGenerator
+import matplotlib.pyplot as plt
 # Import personal API login & initiate the connection to Twitter Rest API
 # !!! This requires to have in the same folder of this script a Tri_API_key.py file
 
@@ -71,6 +73,97 @@ def build_df(queries,api):
     header = ['user_id','user_name','handle']
     df = pd.DataFrame(V,columns=header)
     return df
+
+def get_timeline(user_name='minusplnp',max_statuses = 100):
+    
+    all_statuses = []
+    
+    for tweet in tweepy.Cursor(api.user_timeline, screen_name=user_name, 
+                                exclude_replies=True, include_rts=False,
+                                tweet_mode="extended").items(max_statuses):
+        t_id = tweet.id_str
+        created_at = tweet.created_at
+        text = tweet.full_text
+        hashtags = [h['text'] for h in tweet.entities['hashtags']]
+        users_mention = [u['screen_name'] for u in tweet.entities['user_mentions']] 
+        urls = [u['expanded_url'] for u in tweet.entities['urls']]
+        retweet_count = tweet.retweet_count
+
+
+        if (hasattr(tweet, 'retweeted_status')):
+
+            rt_bool = True
+            rt_user = tweet.retweeted_status.user.screen_name
+            rt_text = tweet.retweeted_status.full_text
+            rt_hashtags = [h['text'] for h in tweet.retweeted_status.entities['hashtags']]
+            rt_urls = [u['expanded_url'] for u in tweet.retweeted_status.entities['urls']]
+            if 'media' in tweet.retweeted_status.entities:
+                rt_media_url = [m['media_url'] for m in tweet.retweeted_status.entities['media']]
+                rt_media_type = [m['type'] for m in tweet.retweeted_status.entities['media']]
+            else:
+                rt_media_url = rt_media_type = None
+
+        else:
+            rt_bool = False 
+            rt_user = rt_text = rt_hashtags = rt_urls = rt_media_url = rt_media_type = None
+
+        # if media not present in status, check if present in retweeted status 
+        # I am assuiming that if you retweet a media content you don't post additional media content
+        if 'media' in tweet.entities:
+            media_url = [m['media_url'] for m in tweet.entities['media']]
+            media_type = [m['type'] for m in tweet.entities['media']]
+        else:
+            media_url = media_type = None
+
+        row = [t_id, created_at, text, hashtags, retweet_count, users_mention, urls, media_url, media_type,
+               rt_bool, rt_user, rt_text, rt_hashtags, rt_urls, rt_media_url, rt_media_type]
+        all_statuses.append(row)
+        user_bio = tweet.user.description
+        #print(created_at)
+
+
+    header = ['tweet_id', 'created_at', 'text', 'hashtags', 'retweet_count', 'users_mention', 'urls',
+              'media_url', 'media_type', 'rt_bool', 'rt_user', 'rt_text', 'rt_hashtags', 
+              'rt_urls', 'rt_media_url', 'rt_media_type']
+
+    df = pd.DataFrame(all_statuses,columns=header)
+    
+    return df
+
+def text_clean(x):
+    # all lower case
+    x = str(x).lower()
+    # remove URLS
+    x = re.sub(r'https?://\w+\.\w+((\/\S+)+)?',r'',x)
+    # remove emojis
+    x = re.sub(r'\\x[a-z0-9]{2}',r'',x)
+    # remove slashes and underscores
+    #x = re.sub(r'[\\\_\/]',r'',x)
+    # remove >3x repeated characters i.e. loooooook -> look
+    x = re.sub(r'([a-z])\1{3,}', r'\1\1', x)
+    
+    
+    return x
+
+def make_wordcloud(user_name='minusplnp',max_statuses=200)
+
+    df = get_timeline(user_name=user_name,max_statuses=max_statuses)
+
+    tweet_speech = df['text'].apply(lambda x: text_clean(x)).str.cat()
+
+    wordcloud_ALL = WordCloud(max_font_size=100, 
+                              max_words=50, 
+                              background_color="black",
+                              collocations=False,
+                              normalize_plurals=False).generate(tweet_speech)
+
+    fig = plt.figure(figsize=(14, 10))
+    ax = fig.add_subplot(111)
+    ax.imshow(wordcloud_ALL,interpolation="bilinear")
+    ax.axis('off')
+    
+    return ax
+
 
 class StreamListener(tweepy.StreamListener):
     '''
