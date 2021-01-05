@@ -6,7 +6,7 @@ import pandas as pd
 # Import personal API login & initiate the connection to Twitter Rest API
 # !!! This requires to have in the same folder of this script a Tri_API_key.py file
 
-from .Tri_API_key import my_API
+from .Twitter_API_key import my_API
 #oauth = OAuth(my_API[0], my_API[1], my_API[2], my_API[3])
 #twitter = Twitter(auth=oauth, retry=True)
 
