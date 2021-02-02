@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # Import personal API login & initiate the connection to Twitter Rest API
 # !!! This requires to have in the same folder of this script a Tri_API_key.py file
 
-from .Twitter_API_key import my_API
+from .Tri_API_key import my_API
 #oauth = OAuth(my_API[0], my_API[1], my_API[2], my_API[3])
 #twitter = Twitter(auth=oauth, retry=True)
 
@@ -145,7 +145,7 @@ def text_clean(x):
     
     return x
 
-def make_wordcloud(user_name='minusplnp',max_statuses=200)
+def make_wordcloud(user_name='minusplnp',max_statuses=200):
 
     df = get_timeline(user_name=user_name,max_statuses=max_statuses)
 
